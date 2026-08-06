@@ -98,8 +98,6 @@ export async function scheduleAllCourseReminders(courses: Course[]): Promise<num
   const channelReady = await ensureChannel();
 
   const now = new Date();
-  const today = now.getDay(); // 0=Sun
-  const todayWeekday = today === 0 ? WeekDay.SUNDAY : (today as WeekDay);
 
   // Get semester week. 未设置(或无效)学期起始日时 currentWeek 为 null,
   // 此时不按周过滤,默认提醒全部课程,避免"静默一条都不提醒"。
@@ -114,6 +112,10 @@ export async function scheduleAllCourseReminders(courses: Course[]): Promise<num
   }
 
   let scheduledCount = 0;
+  // 前瞻窗口:未来 14 天内的每次上课都调度一条一次性(DATE)提醒。
+  // 使用 DATE 而非 WEEKLY 重复闹钟:WEEKLY 在 Expo/Android 的重复闹钟实现不可靠,
+  // DATE 已在多环境实测可触发;App 每次打开/课程变化时会重新调度,保证窗口滚动。
+  const LOOKAHEAD_DAYS = 14;
 
   for (const course of courses) {
     // Check if course runs this week (currentWeek 为 null 时跳过周过滤)
@@ -127,38 +129,30 @@ export async function scheduleAllCourseReminders(courses: Course[]): Promise<num
     const reminderHour = Math.floor(reminderMin / 60);
     const reminderMinute = reminderMin % 60;
 
-    // Calculate days until this course's weekday
-    let daysUntil = course.weekday - todayWeekday;
-    if (daysUntil < 0) daysUntil += 7; // next week
-    if (daysUntil === 0 && reminderMin < now.getHours() * 60 + now.getMinutes()) {
-      // Already passed today, schedule for next week
-      daysUntil = 7;
-    }
+    for (let i = 0; i < LOOKAHEAD_DAYS; i++) {
+      const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, reminderHour, reminderMinute, 0);
+      // JS getDay(): 0=Sun..6=Sat → 转成 WeekDay 枚举(1=Mon..7=Sun)
+      const dow = day.getDay() === 0 ? WeekDay.SUNDAY : day.getDay();
+      if (dow !== course.weekday) continue;
+      if (day.getTime() <= now.getTime()) continue; // 已过的时间不调度
 
-    // Convert WeekDay enum (1=Mon..7=Sun) to notification weekday (1=Sun..7=Sat)
-    const notifWeekday = course.weekday === WeekDay.SUNDAY ? 1 : course.weekday + 1;
-
-    // Schedule notification (channelId 仅当自定义频道创建成功时携带,否则用系统默认频道)
-    const trigger = Notifications.scheduleNotificationAsync({
-      content: {
-        title: `⏰ ${course.name}`,
-        body: `30分钟后上课 · ${course.location || ''} · ${course.instructor || ''}`,
-        data: { courseId: course.id },
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-        weekday: notifWeekday,
-        hour: reminderHour,
-        minute: reminderMinute,
-        ...(channelReady ? { channelId: CHANNEL_ID } : {}),
-      },
-    });
-
-    try {
-      await trigger;
-      scheduledCount++;
-    } catch (e) {
-      console.warn(`[reminders] schedule failed for ${course.name} (${course.startTime}):`, e);
+      try {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `⏰ ${course.name}`,
+            body: `30分钟后上课 · ${course.location || ''} · ${course.instructor || ''}`,
+            data: { courseId: course.id },
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: day,
+            ...(channelReady ? { channelId: CHANNEL_ID } : {}),
+          },
+        });
+        scheduledCount++;
+      } catch (e) {
+        console.warn(`[reminders] schedule failed for ${course.name} (${day.toLocaleString()}):`, e);
+      }
     }
   }
 
