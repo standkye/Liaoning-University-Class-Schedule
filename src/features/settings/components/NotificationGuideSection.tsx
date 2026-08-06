@@ -112,7 +112,7 @@ export default function NotificationGuideSection() {
             <View style={styles.rowContent}>
               <Text style={[styles.rowLabel, { color: theme.textPrimary }]}>精确闹钟权限</Text>
               <Text style={[styles.rowDesc, { color: theme.textTertiary }]}>
-                Android 12+ 需在系统设置中允许，否则提醒可能延迟或丢失
+                Android 12+ 需允许"闹钟和提醒"。若开关不可用(Android 15 系统限制)，提醒可能延迟数分钟，但仍会通知
               </Text>
             </View>
             <Text style={styles.linkText}>去开启</Text>
