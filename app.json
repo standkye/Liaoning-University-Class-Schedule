@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Course Schedule",
+    "slug": "course-schedule",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0A0A0A",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jinna.courseschedule"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0A0A",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.jinna.courseschedule",
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-document-picker",
+      "expo-font",
+      "expo-notifications",
+      "expo-media-library"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "590c023f-f835-47ea-8372-6b13d6ccb893"
+      }
+    }
+  }
+}
