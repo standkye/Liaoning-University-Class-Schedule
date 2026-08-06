@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as IntentLauncher from 'expo-intent-launcher';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
@@ -38,6 +38,11 @@ export default function NotificationGuideSection() {
 
   useEffect(() => {
     checkNotifStatus();
+    // 从系统设置返回 App 时重新检测权限状态(用户在设置里改了权限后能实时反映)
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') checkNotifStatus();
+    });
+    return () => sub.remove();
   }, [checkNotifStatus]);
 
   const requestNotif = async () => {
