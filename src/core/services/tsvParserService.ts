@@ -200,13 +200,74 @@ export function parseLocation(locationText: string): string[] {
 
 /**
  * Main parser: parse the entire TSV text into an array of ParsedCourse.
+ *
+ * The school's export may contain extra columns (e.g. 考核大纲) or change their
+ * order between semesters, so field positions are resolved from the header
+ * line by column name instead of assuming a fixed 16-column layout.
  */
 export function parseCourseTsv(tsvText: string): ParsedCourse[] {
   const lines = tsvText.split('\n').filter(line => line.trim() !== '');
   if (lines.length < 2) return [];
 
-  // Skip header
-  const dataLines = lines.slice(1);
+  // ---- Resolve column indices from the header line ----
+  const headerCols = lines[0].split('\t').map(c => c.trim());
+  // A leading line is treated as the header when it names known fields;
+  // otherwise the whole text is parsed as header-less data using the classic
+  // 16-column fallback layout below.
+  const looksLikeHeader = headerCols.some(name => /课程号|课程名|时间/.test(name));
+
+  const headerIndex: Record<string, number> = {};
+  headerCols.forEach((name, i) => {
+    const normalized = name.replace(/\s+/g, '');
+    if (normalized && !(normalized in headerIndex)) headerIndex[normalized] = i;
+  });
+
+  const FIELDS = {
+    courseId: '课程号',
+    name: '课程名',
+    credits: '学分',
+    courseType: '课程属性',
+    category: '课程类别',
+    examType: '考试类型',
+    instructor: '教师',
+    time: '时间',
+    location: '地点',
+  } as const;
+  type Field = keyof typeof FIELDS;
+
+  // Fallback fixed positions (the original 16-column export), only used when
+  // the text has no recognizable header line.
+  const FALLBACK_COL: Record<Field, number> = {
+    courseId: 0, name: 1, credits: 5, courseType: 6, category: 7,
+    examType: 8, instructor: 9, time: 14, location: 15,
+  };
+
+  const colOf = (field: Field): number => {
+    if (looksLikeHeader) {
+      const normalized = FIELDS[field].replace(/\s+/g, '');
+      return normalized in headerIndex ? headerIndex[normalized] : -1;
+    }
+    return FALLBACK_COL[field];
+  };
+
+  const col: Record<Field, number> = {
+    courseId: colOf('courseId'),
+    name: colOf('name'),
+    credits: colOf('credits'),
+    courseType: colOf('courseType'),
+    category: colOf('category'),
+    examType: colOf('examType'),
+    instructor: colOf('instructor'),
+    time: colOf('time'),
+    location: colOf('location'),
+  };
+
+  const readCol = (lineCols: string[], field: Field): string => {
+    const idx = col[field];
+    return idx >= 0 && idx < lineCols.length ? (lineCols[idx] || '').trim() : '';
+  };
+
+  const dataLines = looksLikeHeader ? lines.slice(1) : lines;
   const courses: ParsedCourse[] = [];
 
   for (const line of dataLines) {
@@ -226,10 +287,10 @@ export function parseCourseTsv(tsvText: string): ParsedCourse[] {
       timeText = (columns[0] || '').trim();
       locationText = (columns[1] || '').trim();
     } else {
-      // Full course line: 16 columns
-      courseId = (columns[0] || '').trim();
-      timeText = (columns[14] || '').trim();
-      locationText = (columns[15] || '').trim();
+      // Full course line: fields are located by their header column name
+      courseId = readCol(columns, 'courseId');
+      timeText = readCol(columns, 'time');
+      locationText = readCol(columns, 'location');
     }
 
     const parsedTime = parseTimeField(timeText);
@@ -244,12 +305,12 @@ export function parseCourseTsv(tsvText: string): ParsedCourse[] {
     };
 
     if (courseId) {
-      const name = (columns[1] || '').trim();
-      const instructor = (columns[9] || '').trim().replace(/\*/g, '');
-      const credits = parseFloat(columns[5] || '0') || 0;
-      const category = (columns[7] || '').trim();
-      const courseType = (columns[6] || '').trim();
-      const examType = (columns[8] || '').trim();
+      const name = readCol(columns, 'name');
+      const instructor = readCol(columns, 'instructor').replace(/\*/g, '');
+      const credits = parseFloat(readCol(columns, 'credits') || '0') || 0;
+      const category = readCol(columns, 'category');
+      const courseType = readCol(columns, 'courseType');
+      const examType = readCol(columns, 'examType');
 
       courses.push({
         courseId,

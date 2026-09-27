@@ -80,7 +80,7 @@ export default function SettingsScreen() {
                   </View>
                   <View style={styles.tsvImportContent}>
                     <Text style={styles.tsvImportLabel}>粘贴课程文本导入</Text>
-                    <Text style={styles.tsvImportDesc}>从教务系统复制选课结果，一键导入</Text>
+                    <Text style={styles.tsvImportDesc}>从教务系统复制本学期课表，一键导入</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color="#606060" />
                 </AnimatedPressable>
@@ -93,7 +93,7 @@ export default function SettingsScreen() {
                     </AnimatedPressable>
                   </View>
                   <Text style={styles.tsvHint}>
-                    登录教务系统 → 选课结果 → 全选复制（Ctrl+A → Ctrl+C）→ 粘贴
+                    登录教务系统 → 本学期课表 → 全选复制（Ctrl+A → Ctrl+C）→ 粘贴
                   </Text>
                   <TextInput
                     style={styles.tsvInput}

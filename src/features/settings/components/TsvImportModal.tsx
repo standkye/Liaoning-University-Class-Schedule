@@ -111,7 +111,7 @@ export default function TsvImportModal({ visible, onClose }: TsvImportModalProps
           <GlassSurface variant="elevated" padding>
             <Text style={styles.helpTitle}>操作步骤</Text>
             <Text style={styles.helpText}>
-              1. 登录学校教务系统 → 选课结果{'\n'}
+              1. 登录学校教务系统 → 本学期课表{'\n'}
               2. 全选课程列表文字（Ctrl+A）→ 复制（Ctrl+C）{'\n'}
               3. 粘贴到下方文本框（Ctrl+V）{'\n'}
               4. 点击「预览」查看识别结果{'\n'}
